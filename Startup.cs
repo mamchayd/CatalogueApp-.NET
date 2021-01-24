@@ -54,6 +54,7 @@ namespace CatalogueApp
 
             app.UseAuthorization();
 
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllerRoute(
@@ -61,6 +62,7 @@ namespace CatalogueApp
                     pattern: "{controller=Home}/{action=Index}/{id?}");
             });
             DbInit.initData(catalogueDb);
+            app.cors
         }
     }
 }

@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.InMemory;
+using CatalogueApp.Services;
 
 namespace CatalogueApp
 {
@@ -24,10 +27,15 @@ namespace CatalogueApp
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllersWithViews();
+           
+           //configurer entityFramework
+            services.AddDbContext<CatalogueDbRepository>(options=>{
+                options.UseInMemoryDatabase("Db_CAT");
+            }) ;
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env,CatalogueDbRepository catalogueDb)
         {
             if (env.IsDevelopment())
             {
@@ -52,6 +60,7 @@ namespace CatalogueApp
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
             });
+            DbInit.initData(catalogueDb);
         }
     }
 }

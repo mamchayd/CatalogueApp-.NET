@@ -62,7 +62,7 @@ namespace CatalogueApp
                     pattern: "{controller=Home}/{action=Index}/{id?}");
             });
             DbInit.initData(catalogueDb);
-            app.cors
+        
         }
     }
 }

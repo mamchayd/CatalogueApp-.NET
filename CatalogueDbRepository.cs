@@ -7,6 +7,7 @@ namespace CatalogueApp
     {
         public DbSet<Category> categories{get;set;}
         public DbSet<Product> products{get;set;}
+        public DbSet<Client> clients{get;set;}
         public CatalogueDbRepository(DbContextOptions options):base (options){
 
         }

@@ -1,54 +1,84 @@
+using CatalogueApp.Models;
+using Confluent.Kafka;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using CatalogueApp.Models;
-using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 
-namespace CatalogueApp.Controllers{
-    
-        [Route("/api/clients")]
+namespace CatalogueApp.Controllers
+{   [Route("/api/clients")]
+    public class ClientsRestRepository: Controller
+    {
+        public CatalogueDbRepository catalogueDbRepository { get; set; }
+        private string topic = "facture";
+        private ProducerConfig _config;
 
-    public class ClientRestController : Controller{
-
-        CatalogueDbRepository catalogueRepository{get;set;}
-
-        public ClientRestController(CatalogueDbRepository repozitory){
-                this.catalogueRepository=repozitory;
+        public ClientsRestRepository(ProducerConfig _config, CatalogueDbRepository repository)
+        {
+            this._config = _config;
+            this.catalogueDbRepository = repository;
         }
-
-
         [HttpGet]
-        public IEnumerable<Client> findAllClient(){
-            return catalogueRepository.clients;
+        public IEnumerable<Client> list()
+        {
+            return catalogueDbRepository.clients;
         }
-        [HttpGet("{Id}")]
-        public Client getOneClient(int Id){
-            return catalogueRepository.clients.FirstOrDefault(c=>c.ClientID==Id);
-        }
-       
-
         [HttpPost]
-        public Client save([FromBody]Client client){
-            catalogueRepository.clients.Add(client);
-            catalogueRepository.SaveChanges();
-            return client;
+        public async Task<ActionResult> add([FromBody] Client client)
+        {
+            catalogueDbRepository.clients.Add(client);
+            catalogueDbRepository.SaveChanges();
+
+            string serializedCustomer = JsonConvert.SerializeObject(client);
+            using (var producer = new ProducerBuilder<Null, string>(_config).Build())
+            {
+                await producer.ProduceAsync(topic, new Message<Null, string> { Value = "ajouter client : " + serializedCustomer });
+                producer.Flush(TimeSpan.FromSeconds(10));
+                return Ok(true);
+            }
+        }
+        [HttpGet("{id}")]
+        public Client find(int id)
+        {
+            return catalogueDbRepository.clients.FirstOrDefault(c=> c.ClientID==id);
+        }
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> delete(int id)
+        {
+            Client client=catalogueDbRepository.clients.Find(id);
+            catalogueDbRepository.clients.Remove(client);
+            catalogueDbRepository.SaveChanges();
+
+            string serializedCustomer = JsonConvert.SerializeObject(client);
+            using (var producer = new ProducerBuilder<Null, string>(_config).Build())
+            {
+                await producer.ProduceAsync(topic, new Message<Null, string> { Value = "Suppression de client : " + serializedCustomer });
+                producer.Flush(TimeSpan.FromSeconds(10));
+                return Ok(true);
+            }
+
+        }
+        [HttpPut("{id}")]
+        public async Task<ActionResult> update(int id, [FromBody] Client client)
+        {
+            string serializedCustomer_before = JsonConvert.SerializeObject(client);
+            client.ClientID = id;
+            catalogueDbRepository.clients.Update(client);
+            catalogueDbRepository.SaveChanges();
+
+            string serializedCustomer = JsonConvert.SerializeObject(client);
+            using (var producer = new ProducerBuilder<Null, string>(_config).Build())
+            {
+                await producer.ProduceAsync(topic, new Message<Null, string> { 
+                    Value = "Update customer from " + serializedCustomer_before + " to " + serializedCustomer 
+                });
+                producer.Flush(TimeSpan.FromSeconds(10));
+                return Ok(true);
+            }
         }
 
-        [HttpPut("{Id}")]
-        public Client update([FromBody]Client client,int Id){
-            client.ClientID=Id; 
-            catalogueRepository.clients.Update(client);
-            catalogueRepository.SaveChanges();
-            return client;
-        }
-
-        [HttpDelete("{Id}")]
-        public void Delete(int Id){
-            Client client=catalogueRepository.clients.FirstOrDefault(c=>c.ClientID==Id);
-            catalogueRepository.Remove(client);
-            catalogueRepository.SaveChanges();
-          
-        }
-     
-        
     }
 }

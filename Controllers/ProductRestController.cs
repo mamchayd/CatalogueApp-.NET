@@ -1,75 +1,99 @@
 using CatalogueApp.Models;
+using Confluent.Kafka;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Collections;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
-namespace CatalogueApp.Controllers{
+namespace CatalogueApp.Controllers
+{   [Route("/api/products")]
+    public class ProductRestController : Controller
+    {
+        public CatalogueDbRepository catalogueDbRepository { get; set; }
+        private string topic = "facture";
+        private ProducerConfig _config;
 
-    [Route("/api/products")]
-    public class ProductRestController : Controller{
-        //unite de persistance
-        public CatalogueDbRepository catalogueRepository { get; set; }
-        //ingection des dependance par constrecture
-        public ProductRestController(CatalogueDbRepository repozitory){
-            this.catalogueRepository=repozitory;
+        public ProductRestController(ProducerConfig _config, CatalogueDbRepository repository)
+        {
+            this._config = _config;
+            this.catalogueDbRepository = repository;
         }
-
         [HttpGet]
-        public IEnumerable<Product> findAll(){
-            return catalogueRepository.products.Include(p=>p.category);
+        public IEnumerable<Product> list()
+        {
+            catalogueDbRepository.products.Include(p=>p.category);
+            return catalogueDbRepository.products;
         }
-
-
-     [HttpGet("paginate")]
-         public IEnumerable<Product> page(int page=0,int size=1){
-            int skipValue=(page-1)*size;
-            return catalogueRepository
-                        .products
-                        .Include(p=>p.category)
-                        .Skip(skipValue)
-                        .Take(size);
-        }
-        
-
-         [HttpGet("search")]
-        public IEnumerable<Product> search(string kw){
-            return catalogueRepository
-                        .products
-                        .Include(p=>p.category)
-                        .Where(p=>p.Name.Contains(kw));
-        }
-
-        [HttpGet("{Id}")]
-        public Product getOne(int Id){
-            return catalogueRepository.products.Include(p=>p.category)
-            .FirstOrDefault(p=>p.productID==Id);
-        }
-
         [HttpPost]
-        public Product save([FromBody]Product product){
-            catalogueRepository.products.Add(product);
-            catalogueRepository.SaveChanges();
-            return product;
+        public async Task<ActionResult> add([FromBody] Product product)
+        {
+            catalogueDbRepository.products.Add(product);
+            catalogueDbRepository.SaveChanges();
+
+            string serializedProduct = JsonConvert.SerializeObject(product);
+            using (var producer = new ProducerBuilder<Null, string>(_config).Build())
+            {
+                await producer.ProduceAsync(topic, new Message<Null, string> { Value = "Add product : " + serializedProduct });
+                producer.Flush(TimeSpan.FromSeconds(10));
+                return Ok(true);
+            }
+        }
+        [HttpGet("search")]
+        public IEnumerable<Product> search(string kw)
+        {
+            return catalogueDbRepository
+                .products
+                .Include(p => p.category)
+                .Where(p=>p.Name.Contains(kw));
+        }
+        [HttpGet("paginate")]
+        public IEnumerable<Product> page(int page, int size)
+        {
+            int skip = (page - 1) * size;
+            return catalogueDbRepository.products.Include(p=>p.category).Skip(skip).Take(size);
+        }
+        [HttpGet("{id}")]
+        public Product find(int id)
+        {
+            return catalogueDbRepository.products.Include(p=>p.category).FirstOrDefault(c=> c.productID==id);
+        }
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> delete(int id)
+        {
+            Product product = catalogueDbRepository.products.Find(id);
+            catalogueDbRepository.products.Remove(product);
+            catalogueDbRepository.SaveChanges();
+
+            string serializedProduct = JsonConvert.SerializeObject(product);
+            using (var producer = new ProducerBuilder<Null, string>(_config).Build())
+            {
+                await producer.ProduceAsync(topic, new Message<Null, string> { Value = "supp product : " + serializedProduct });
+                producer.Flush(TimeSpan.FromSeconds(10));
+                return Ok(true);
+            }
+
+        }
+        [HttpPut("{id}")]
+        public async Task<ActionResult> update(int id, [FromBody] Product product)
+        {
+            string serializedProduct_before = JsonConvert.SerializeObject(product);
+            product.productID = id;
+            catalogueDbRepository.products.Update(product);
+            catalogueDbRepository.SaveChanges();
+
+            string serializedProduct = JsonConvert.SerializeObject(product);
+            using (var producer = new ProducerBuilder<Null, string>(_config).Build())
+            {
+                await producer.ProduceAsync(topic, new Message<Null, string> { 
+                    Value = "Update product from " + serializedProduct_before + " to " + serializedProduct 
+                });
+                producer.Flush(TimeSpan.FromSeconds(10));
+                return Ok(true);
+            }
         }
 
-        [HttpPut("{Id}")]
-        public Product update([FromBody]Product product,int Id){
-            product.productID=Id; 
-            catalogueRepository.products.Update(product);
-            catalogueRepository.SaveChanges();
-            return product;
-        }
-
-        [HttpDelete("{Id}")]
-        public void Delete(int Id){
-            Product product=catalogueRepository.products.FirstOrDefault(p=>p.productID==Id);
-            catalogueRepository.Remove(product);
-            catalogueRepository.SaveChanges();
-          
-        }
-     
-        
     }
 }

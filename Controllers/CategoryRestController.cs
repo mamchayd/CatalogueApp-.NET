@@ -16,7 +16,7 @@ namespace CatalogueApp.Controllers
     public class CategoryRestController: Controller
     {
         public CatalogueDbRepository catalogueDbRepository { get; set; }
-        private string topic = "facture";
+        private string topic = "facturation";
         private ProducerConfig _config;
         public CategoryRestController(ProducerConfig _config, CatalogueDbRepository repository)
         {

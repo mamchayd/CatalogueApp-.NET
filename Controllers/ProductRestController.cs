@@ -13,7 +13,7 @@ namespace CatalogueApp.Controllers
     public class ProductRestController : Controller
     {
         public CatalogueDbRepository catalogueDbRepository { get; set; }
-        private string topic = "facture";
+        private string topic = "facturation";
         private ProducerConfig _config;
 
         public ProductRestController(ProducerConfig _config, CatalogueDbRepository repository)

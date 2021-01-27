@@ -13,7 +13,7 @@ namespace CatalogueApp.Controllers
     public class ClientsRestRepository: Controller
     {
         public CatalogueDbRepository catalogueDbRepository { get; set; }
-        private string topic = "facture";
+        private string topic = "facturation";
         private ProducerConfig _config;
 
         public ClientsRestRepository(ProducerConfig _config, CatalogueDbRepository repository)
@@ -32,10 +32,10 @@ namespace CatalogueApp.Controllers
             catalogueDbRepository.clients.Add(client);
             catalogueDbRepository.SaveChanges();
 
-            string serializedCustomer = JsonConvert.SerializeObject(client);
+            string serializedClient = JsonConvert.SerializeObject(client);
             using (var producer = new ProducerBuilder<Null, string>(_config).Build())
             {
-                await producer.ProduceAsync(topic, new Message<Null, string> { Value = "ajouter client : " + serializedCustomer });
+                await producer.ProduceAsync(topic, new Message<Null, string> { Value = "ajouter client : " + serializedClient });
                 producer.Flush(TimeSpan.FromSeconds(10));
                 return Ok(true);
             }
@@ -52,10 +52,10 @@ namespace CatalogueApp.Controllers
             catalogueDbRepository.clients.Remove(client);
             catalogueDbRepository.SaveChanges();
 
-            string serializedCustomer = JsonConvert.SerializeObject(client);
+            string serializedClient = JsonConvert.SerializeObject(client);
             using (var producer = new ProducerBuilder<Null, string>(_config).Build())
             {
-                await producer.ProduceAsync(topic, new Message<Null, string> { Value = "Suppression de client : " + serializedCustomer });
+                await producer.ProduceAsync(topic, new Message<Null, string> { Value = "Suppression de client : " + serializedClient });
                 producer.Flush(TimeSpan.FromSeconds(10));
                 return Ok(true);
             }
@@ -64,16 +64,16 @@ namespace CatalogueApp.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult> update(int id, [FromBody] Client client)
         {
-            string serializedCustomer_before = JsonConvert.SerializeObject(client);
+            string serializedClient_before = JsonConvert.SerializeObject(client);
             client.ClientID = id;
             catalogueDbRepository.clients.Update(client);
             catalogueDbRepository.SaveChanges();
 
-            string serializedCustomer = JsonConvert.SerializeObject(client);
+            string serializedClient = JsonConvert.SerializeObject(client);
             using (var producer = new ProducerBuilder<Null, string>(_config).Build())
             {
                 await producer.ProduceAsync(topic, new Message<Null, string> { 
-                    Value = "Update customer from " + serializedCustomer_before + " to " + serializedCustomer 
+                    Value = "Update Client from " + serializedClient_before + " to " + serializedClient 
                 });
                 producer.Flush(TimeSpan.FromSeconds(10));
                 return Ok(true);

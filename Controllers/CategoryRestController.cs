@@ -29,18 +29,12 @@ namespace CatalogueApp.Controllers
             return catalogueDbRepository.categories;
         }
         [HttpPost]
-        public async Task<ActionResult> add([FromBody] Category category)
+        public Category add([FromBody] Category category)
         {
             catalogueDbRepository.categories.Add(category);
             catalogueDbRepository.SaveChanges();
 
-            string serializedCategory = JsonConvert.SerializeObject(category);
-            using (var producer = new ProducerBuilder<Null, string>(_config).Build())
-            {
-                await producer.ProduceAsync(topic, new Message<Null, string> { Value = "Add category : "+serializedCategory });
-                producer.Flush(TimeSpan.FromSeconds(10));
-                return Ok(true);
-            }
+           return category;
         }
         [HttpGet("{id}")]
         public Category find(int id)
@@ -54,39 +48,21 @@ namespace CatalogueApp.Controllers
             return category.Products;
         }
         [HttpDelete("{id}")]
-        public async Task<ActionResult> delete(int id)
+        public void delete(int id)
         {
 
             Category category=catalogueDbRepository.categories.Find(id);
             catalogueDbRepository.categories.Remove(category);
             catalogueDbRepository.SaveChanges();
-
-            string serializedCategory = JsonConvert.SerializeObject(category);
-            using (var producer = new ProducerBuilder<Null, string>(_config).Build())
-            {
-                await producer.ProduceAsync(topic, new Message<Null, string> { Value = "Delete category : " + serializedCategory });
-                producer.Flush(TimeSpan.FromSeconds(10));
-                return Ok(true);
-            }
-
         }
         [HttpPut("{id}")]
-        public async Task<ActionResult> update(int id, [FromBody] Category category)
+        public Category update(int id, [FromBody] Category category)
         {
-            string serializedCategory_before = JsonConvert.SerializeObject(category);
             category.CategoryID = id;
             catalogueDbRepository.categories.Update(category);
             catalogueDbRepository.SaveChanges();
 
-            string serializedCategory = JsonConvert.SerializeObject(category);
-            using (var producer = new ProducerBuilder<Null, string>(_config).Build())
-            {
-                await producer.ProduceAsync(topic, new Message<Null, string> { 
-                    Value = "Update category from " + serializedCategory_before + " to "+ serializedCategory 
-                });
-                producer.Flush(TimeSpan.FromSeconds(10));
-                return Ok(true);
-            }
+          return category;
         }
 
     }

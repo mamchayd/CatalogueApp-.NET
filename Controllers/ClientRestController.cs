@@ -27,7 +27,14 @@ namespace CatalogueApp.Controllers
             return catalogueDbRepository.clients;
         }
         [HttpPost]
-        public async Task<ActionResult> add([FromBody] Client client)
+        public Client add([FromBody] Client client)
+        {
+            catalogueDbRepository.clients.Add(client);
+            catalogueDbRepository.SaveChanges();
+
+          return client;
+        }
+       /* public async Task<ActionResult> add([FromBody] Client client)
         {
             catalogueDbRepository.clients.Add(client);
             catalogueDbRepository.SaveChanges();
@@ -39,14 +46,20 @@ namespace CatalogueApp.Controllers
                 producer.Flush(TimeSpan.FromSeconds(10));
                 return Ok(true);
             }
-        }
+        }*/
         [HttpGet("{id}")]
         public Client find(int id)
         {
             return catalogueDbRepository.clients.FirstOrDefault(c=> c.ClientID==id);
         }
         [HttpDelete("{id}")]
-        public async Task<ActionResult> delete(int id)
+         public void delete(int id)
+        {
+            Client client=catalogueDbRepository.clients.Find(id);
+            catalogueDbRepository.clients.Remove(client);
+            catalogueDbRepository.SaveChanges();
+       }
+       /* public async Task<ActionResult> delete(int id)
         {
             Client client=catalogueDbRepository.clients.Find(id);
             catalogueDbRepository.clients.Remove(client);
@@ -60,8 +73,16 @@ namespace CatalogueApp.Controllers
                 return Ok(true);
             }
 
-        }
+        }*/
         [HttpPut("{id}")]
+         public Client update(int id, [FromBody] Client client)
+        {
+            client.ClientID = id;
+            catalogueDbRepository.clients.Update(client);
+            catalogueDbRepository.SaveChanges();
+            return client;
+        }
+        /*
         public async Task<ActionResult> update(int id, [FromBody] Client client)
         {
             string serializedClient_before = JsonConvert.SerializeObject(client);
@@ -78,7 +99,7 @@ namespace CatalogueApp.Controllers
                 producer.Flush(TimeSpan.FromSeconds(10));
                 return Ok(true);
             }
-        }
+        }*/
 
     }
 }

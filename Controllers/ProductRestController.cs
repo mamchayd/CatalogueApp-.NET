@@ -28,18 +28,12 @@ namespace CatalogueApp.Controllers
             return catalogueDbRepository.products;
         }
         [HttpPost]
-        public async Task<ActionResult> add([FromBody] Product product)
+        public Product add([FromBody] Product product)
         {
             catalogueDbRepository.products.Add(product);
             catalogueDbRepository.SaveChanges();
 
-            string serializedProduct = JsonConvert.SerializeObject(product);
-            using (var producer = new ProducerBuilder<Null, string>(_config).Build())
-            {
-                await producer.ProduceAsync(topic, new Message<Null, string> { Value = "Add product : " + serializedProduct });
-                producer.Flush(TimeSpan.FromSeconds(10));
-                return Ok(true);
-            }
+            return product;
         }
         [HttpGet("search")]
         public IEnumerable<Product> search(string kw)
@@ -61,39 +55,22 @@ namespace CatalogueApp.Controllers
             return catalogueDbRepository.products.Include(p=>p.category).FirstOrDefault(c=> c.productID==id);
         }
         [HttpDelete("{id}")]
-        public async Task<ActionResult> delete(int id)
+        public void delete(int id)
         {
             Product product = catalogueDbRepository.products.Find(id);
             catalogueDbRepository.products.Remove(product);
             catalogueDbRepository.SaveChanges();
 
-            string serializedProduct = JsonConvert.SerializeObject(product);
-            using (var producer = new ProducerBuilder<Null, string>(_config).Build())
-            {
-                await producer.ProduceAsync(topic, new Message<Null, string> { Value = "supp product : " + serializedProduct });
-                producer.Flush(TimeSpan.FromSeconds(10));
-                return Ok(true);
-            }
-
         }
         [HttpPut("{id}")]
-        public async Task<ActionResult> update(int id, [FromBody] Product product)
+        public Product update(int id, [FromBody] Product product)
         {
-            string serializedProduct_before = JsonConvert.SerializeObject(product);
+            
             product.productID = id;
             catalogueDbRepository.products.Update(product);
             catalogueDbRepository.SaveChanges();
-
-            string serializedProduct = JsonConvert.SerializeObject(product);
-            using (var producer = new ProducerBuilder<Null, string>(_config).Build())
-            {
-                await producer.ProduceAsync(topic, new Message<Null, string> { 
-                    Value = "Update product from " + serializedProduct_before + " to " + serializedProduct 
-                });
-                producer.Flush(TimeSpan.FromSeconds(10));
-                return Ok(true);
+            return product;
             }
-        }
 
     }
 }
